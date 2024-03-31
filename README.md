@@ -2,16 +2,16 @@
 
 This is a naive python implementation of Aggregated Channel Feature classifier. For simplicity, it does not follow all the advanced detals in (Piotr's Computer Vision)[https://github.com/pdollar/toolbox] who is the author of ACF. The speed of detection is extremely slow. Therefore, the current version is only for education purpose and not suitable for any comercial use. 
 
-# Developers
+# (Optional) Developers
 
-Missing features including: 
+Developers could use the developer branch. This project still miss the following features: 
 
 1. Fast pyramid feature algorithm is not implemented, the detection is extremely slow. See (this paper)[https://ieeexplore.ieee.org/document/6714453]
 2. Multiple-class detection is not implemented, one-class detection only
 3. The soft cascaded classifier is not implemented, it is simplified into a single classifier
 4. The max/min size of detecting sliding window is 80 x 80/16 x 16 or manually set
 
-This repo need contributor help on issue 1 particullary. Some have already implement a (C++ verions of fast detection)[https://github.com/elucideye/acf]. The MATLAB officially suppports (compile the fast detection function)[https://ww2.mathworks.cn/help/vision/ug/example-ObjectDetectionFromImages.html] into C++. However, none of them provide any port of training function code. A possible solution is using the training code of single AdaBoost classifier in our repo and adapt it to the detection function. The detection function expected a cascaded classifier instead of a simple classifier, we could set the threshold as 0 except the last classifier before we solve the issue 3.
+This repo need contributor help on issue 1 particullary. We need a fast detection implementation. Some have already implement a (C++ verions of fast detection)[https://github.com/elucideye/acf]. The MATLAB officially suppports (compile the fast detection function)[https://ww2.mathworks.cn/help/vision/ug/example-ObjectDetectionFromImages.html] into C++. However, none of them provide any port of training function code. A possible solution is using the training code of single AdaBoost classifier in our repo and adapt it to the detection function. However, the detection function expected a cascaded classifier instead of a simple classifier. To walkaround that before we solve the issue 3, we may set the thresholds of classifier 0 except the last one.
 
 ## Files
 
