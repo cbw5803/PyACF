@@ -2,7 +2,7 @@
 
 This is a naive python implementation of Aggregated Channel Feature classifier. For simplicity, it does not follow all the advanced detals in (Piotr's Computer Vision)[https://github.com/pdollar/toolbox] who is the author of ACF. The speed of detection is extremely slow. Therefore, the current version is only for education purpose and not suitable for any comercial use. 
 
-# (Optional) Developers
+## (Optional) For Developers
 
 Developers could use the development branch. This project still miss the following features: 
 
