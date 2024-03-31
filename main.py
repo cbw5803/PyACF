@@ -127,7 +127,7 @@ def aggregated_feature(patches):
     # return features: L x 20 x 20 x 10 output
     return aggregated_features
 
-def train(positive_examples, negative_examples):
+def train(positive_examples, negative_examples, path='model/weights.pkl'):
     # the main training function
     # examples: L x 80 x 80 x 3 input
     positive_aggregated = aggregated_feature(positive_examples)
@@ -146,120 +146,22 @@ def train(positive_examples, negative_examples):
     
     #TODO New in version 1.2: base_estimator was renamed to estimator
     base_classifier_1 = DecisionTreeClassifier(max_depth=2)
-    clf_0 = AdaBoostClassifier(
-        base_estimator=base_classifier_1,n_estimators=23, random_state=6)
-    base_classifier_2 = DecisionTreeClassifier(max_depth=2)
-    clf_1 = AdaBoostClassifier(
-        base_estimator=base_classifier_1,n_estimators=128, random_state=6)
-    base_classifier_3 = DecisionTreeClassifier(max_depth=2)
-    clf_2 = AdaBoostClassifier(
-        base_estimator=base_classifier_1,n_estimators=512, random_state=6)
-    base_classifier_4 = DecisionTreeClassifier(max_depth=2)
-    clf_3 = AdaBoostClassifier(
+    classifier = AdaBoostClassifier(
         base_estimator=base_classifier_1,n_estimators=2048, random_state=6)
     
-    classifiers = [clf_0, clf_1, clf_2, clf_3]
-    i = 0
-    for clf in classifiers:
-        print("-"*10)
-        print("input shape: ", X_train.shape, "label shape:", y_train.shape)
-        print("train the ",i," classifier...")
-        clf.fit(X_train, y_train)
-        print("done.")
-        i += 1
-        
     print("-"*10)
-    print("optimize the thresholds for stages...")
-    best_parameters = stage_thresholds(positive_flat, negative_flat, classifiers, 7)
-    print("find best thresholds:",best_parameters)
+    print("input shape: ", X_train.shape, "label shape:", y_train.shape)
+    print("train the classifier...")
+    classifier.fit(X_train, y_train)
     print("done.")
 
     print("-"*10)
     print("save the model...")
-    save_model(best_parameters, classifiers)
-    print('done.')
-        
-    return None
-
-def stage_thresholds(positive_flat, negative_flat, classifiers, N):
-    # positive_examples: N x 4000
-    # negative_examples: 5N x 4000
-    # classifiers: 4 trained classifiers
-    
-    parameter_combinations = []
-    for i in range(N+1):
-        for j in range(i+1):
-            for k in range(j+1):
-                parameter_combinations.append((k*0.5/N, j*0.5/N, i*0.5/N))
-    print("try combinations:",len(parameter_combinations))
-    
-    # optimize 7 x 7 x 7 to get best accuracy or F1 scores thresholds
-    metrics = []
-    for each_combination in parameter_combinations:
-        metric = cascaded_metric(
-            positive_flat, negative_flat, each_combination, classifiers)
-        metrics.append(metric)
-    best_i = np.argmax(metrics)
-
-    # return stage_thresholds : 3
-    return parameter_combinations[best_i]
-
-def cascaded_metric(positive_flat, negative_flat,
-                   parameters, classifiers, metrics='accuracy'):
-    # positive_flat: N x 4000
-    # negative_flat: 5N x 4000
-    # parameters: threshold for each stage
-    # classifiers: 4 trained classifiers
-    y_positive = cascaded_predict(positive_flat, parameters, classifiers)
-    TP = y_positive.sum()
-    FN = y_positive.shape[0] - TP
-    
-    y_negative = cascaded_predict(negative_flat, parameters, classifiers)
-    FP = y_negative.sum()
-    TN = y_negative.shape[0] - FP
-    
-    if metrics == 'F1':
-        recall = TP/(TP+FN)
-        precision = TP/(TP+FP)
-        return 2*recall*precision/(recall + precision)
-    else:
-        return (TP+TN)/(TP+FP+FN+TN)
-
-def cascaded_predict(examples, parameters, classifiers):
-    # examples: L x 4000
-    # parameters: threshold for each stage
-    # classifiers: 4 trained classifiers
-    clf_0, clf_1, clf_2, clf_3 = classifiers
-    threshold_0, threshold_1, threshold_2 = parameters
-    
-    y = np.zeros(examples.shape[0])
-    selected_0 = clf_0.predict_proba(examples)[:,1] > threshold_0
-    output_0 = examples[selected_0]
-    if output_0.shape[0] == 0: return y
-    y_0 = y[selected_0]
-    
-    selected_1 = clf_1.predict_proba(output_0)[:,1] > threshold_1
-    output_1 = output_0[selected_1]
-    if output_1.shape[0] == 0: return y
-    y_1 = y_0[selected_1]
-    
-    selected_2 = clf_2.predict_proba(output_1)[:,1] > threshold_2
-    output_2 = output_1[selected_2]
-    if output_2.shape[0] == 0: return y
-    y_2 = y_1[selected_2]
-          
-    y_1[selected_2] = y_2 = clf_3.predict(output_2)
-    y_0[selected_1] = y_1
-    y[selected_0] = y_0
-    return y
-
-
-def save_model(stage_thresholds, classifiers, path='model/weights.pkl'):
-    # stage_thresholds: 3
-    # classifiers: 4
-    
+    print(path)
     with open(path, "wb") as file:
-        pickle.dump([stage_thresholds, classifiers], file)
+        pickle.dump(classifier, file)
+    print('done.')
+
     return None
 
 def non_maximum_suppression(boxes_and_scores, iou_threshold):
@@ -300,7 +202,6 @@ def sliding_window(image, window_size, step_size=4):
     for y in range(0, image.shape[0] - window_size[0] + 1, step_size):
         for x in range(0, image.shape[1] - window_size[1] + 1, step_size):
             yield (x, y, image[y:y + window_size[1], x:x + window_size[0],:])
-
             
 def get_scales(max_scale=80, min_scale=16, num_octave=8):
     factor = 0.5**(1/num_octave)
@@ -311,54 +212,29 @@ def get_scales(max_scale=80, min_scale=16, num_octave=8):
         scale = round(scale * factor)
     return scales
 
-
-def detect(image, path='./model/weights.pkl', debug=True, fix_window_51=False):
-    if debug:
-        min_threshold=0.5
-        window_level=1
-    else:
-        min_threshold=0
-        window_level=100
-
+def detect(image, path='model/weights.pkl', min_threshold=0.5, window_size=None):
     # image: x, y, 3 input, reshape into
     print("image size:", image.shape)
-    
+    with open(path, "rb") as file:
+        classifier = pickle.load(file)
+    # number of sample too small
+    threshold = max(min_threshold, 0.5)
     # by default, max window size 80 x 80 and min window size 16 x 16
     sliding_window_sizes = get_scales()
-    
-    with open(path, "rb") as file:
-        stage_thresholds, classifiers = pickle.load(file)
-    clf_0, clf_1, clf_2, clf_3 = classifiers
-    threshold_0, threshold_1, threshold_2 = stage_thresholds
-    
-    # number of sample too small
-    threshold_0 = max(min_threshold, threshold_0)
-    threshold_1 = max(min_threshold, threshold_1)
-    threshold_2 = max(min_threshold, threshold_2)
-    threshold_3 = max(min_threshold, 0.5)
-    
+    if window_size:
+        sliding_window_sizes = window_size
+        
     candidates = []
-    if fix_window_51:
-        sliding_window_sizes = [51]
-
-    for window_size in sliding_window_sizes[:window_level]:
+    for window_size in sliding_window_sizes:
         print("window size:", window_size)
         i = 0
         for x, y, patch in sliding_window(image, (window_size,window_size)):
-            if i%1000 == 0:print('*', end='', flush=True)
+            if i%500 == 0:print('*', end='', flush=True)
             i += 1
-            
             patch_resized = cv2.resize(patch, (80, 80)).reshape(1,80,80,3)
             feature_flat = aggregated_feature(patch_resized).reshape(1,-1)
-
-            if clf_0.predict_proba(feature_flat)[0][1] <= threshold_0:
-                continue
-            if clf_1.predict_proba(feature_flat)[0][1] <= threshold_1:
-                continue
-            if clf_2.predict_proba(feature_flat)[0][1] <= threshold_2:
-                continue
-            score = clf_3.predict_proba(feature_flat)[0][1]
-            if score <= 0.5:
+            score = classifier.predict_proba(feature_flat)[0][1]
+            if score <= min_threshold:
                 continue
             candidates.append([x,y,x+window_size,y+window_size,score])
         print("\nFind candidates:", len(candidates))
@@ -378,22 +254,17 @@ def detect(image, path='./model/weights.pkl', debug=True, fix_window_51=False):
 def display(predictions, image):
     # load image
     plt_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    
     # Create figure and axes
     fig, ax = plt.subplots(figsize=(20, 16))
-
     # Display the image
     ax.imshow(plt_image)
     
     for x1, y1, x2, y2, score in predictions:
-
         # Create a Rectangle patch
         rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='green', facecolor='none')
-
         # Add the bounding box to the plot
         ax.add_patch(rect)
         ax.text(x1, y1, f'score: {score:.2f}', color='green')
-        
     # Display the plot
     plt.show()
 
