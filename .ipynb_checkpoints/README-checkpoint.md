@@ -3,8 +3,8 @@
 This is a naive python implementation of Aggregated Channel Feature classifier. For simplicity, it does not follow all the advanced detals in the literature and the speed of detection is extremely slow. Therefore, it is only for education purpose and not suitable for any comercial use. The missing features including: 
 
 1. Fast pyramid feature algorithm is not implemented, the detection is extremely slow
-2. Multiple-class detection have not been implemented, one-class detection only
-3. The soft cascaded classifier is simplified into a single classifier
+2. Multiple-class detection is not implemented, one-class detection only
+3. The soft cascaded classifier is not implemented, it is simplified into a single classifier
 4. The max/min size of detecting sliding window is 80 x 80/16 x 16 or manually set
 
 The source code of this version is very simple and straigt-forward. Need more contributers to finish the above goals.
@@ -19,14 +19,18 @@ The demo.ipynb file contains a quick tutorial of how to use this package.
 
 ## Quick Start
 
-Install the package
+Download the source code directly
 
 ```bash
-pip install pyacf
+git clone https://github.com/cbw5803/PyACF.git
 ```
 
-Import the packages for 
+Go into the PyACF directory, install the required packages by run the command
+```bash
+pip install -r requirements.txt
+```
 
+Now open jupyter notebook or any python editor you like to run the code. Import the following library first
 ```python
 import cv2
 import pyacf as acf
@@ -52,7 +56,7 @@ acf.train(positive_array, negative_array, path='model/weights.pkl')
 
 he detect() function will load the AdaBoost classifier and use a sliding window to find candidate face patches, and eventually use NMS to pick the most possible bounding box. Since this implementation is a naive solution, the detecting speed is EXTREMELY slow and you have to wait 30 minutues to finish. After about 8 asterisks displayed, the detection will be finished.
 
-In this test picture, for simplicity we manually use 51 x 51 as the only size for sliding window. To reduce false positive, we also increase the threshold from standard 0.5 to 0.98
+In this test picture, for simplicity we manually use 51 x 51 as the only size for sliding window. To reduce false positive, we also increase the threshold from standard 0.5 to 0.98. To reproduce the result, the random state of AdaBoost had been changed into fixed value 6.
 
 We need import opecv to read data from jpeg file
 
